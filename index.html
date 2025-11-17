@@ -4,38 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Répétition Théâtre: L'Homme de la situation</title>
-    <!-- Chargement de Tailwind CSS pour un design moderne et responsive -->
+    <!-- Chargement de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Configuration de la police Inter */
+        /* Configuration de la police Inter et thème sombre */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
             background-color: #1f2937; /* Gris foncé */
         }
-        /* Styles pour une meilleure lisibilité mobile */
+
+        /* Classes de base pour les répliques */
         .line-container {
-            min-height: 150px;
+            min-height: 150px; /* Assure une hauteur minimale pour la lisibilité mobile */
+            transition: all 0.3s ease-in-out;
         }
+        
+        /* Style pour les répliques du partenaire (gris foncé) */
         .actor-line {
-            background-color: #374151; /* Gris plus clair pour les répliques des autres */
-            color: #d1d5db;
+            background-color: #374151; /* Gris plus clair */
+            color: #d1d5db; /* Texte blanc-gris */
         }
-        /* La couleur du prompt à l'acteur change en fonction du rôle */
+
+        /* Style pour la réplique à jouer par l'utilisateur (vert éclatant) */
         .user-prompt {
-            background-color: #10b981; /* Vert émeraude pour votre tour */
-            color: #1f2937;
+            background-color: #10b981; /* Vert émeraude */
+            color: #1f2937; /* Texte très sombre sur fond clair */
             cursor: pointer;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
         }
+
+        /* Style de la réplique révélée (Jaune pour 'Triche !') */
         .revealed-line {
-            background-color: #fcd34d; /* Jaune pour la réplique révélée */
+            background-color: #fcd34d; /* Jaune */
             color: #1f2937;
             font-style: italic;
         }
+
         /* Style des boutons d'action */
         #rehearsalActions button {
-            transition: background-color 0.15s, transform 0.15s;
+            transition: background-color 0.15s, transform 0.15s, opacity 0.15s;
         }
     </style>
 </head>
@@ -44,55 +52,69 @@
     <div id="app" class="p-4 sm:p-8 max-w-2xl mx-auto">
         <header class="text-center mb-8">
             <h1 class="text-3xl font-bold text-white mb-2">L'HOMME DE LA SITUATION</h1>
-            <h2 id="currentRoleDisplay" class="text-xl text-gray-400">Sélectionnez votre rôle ci-dessous.</h2>
+            <!-- Affichage du rôle choisi -->
+            <h2 id="currentRoleDisplay" class="text-xl text-gray-400">Rôle ciblé : Non sélectionné</h2>
         </header>
 
-        <!-- Sélecteur de Rôle (Apparaît au début) -->
-        <div id="roleSelection" class="bg-gray-800 p-6 rounded-xl shadow-2xl mb-6">
-            <label for="roleSelector" class="block text-white text-lg font-semibold mb-3">Quel rôle allez-vous répéter ?</label>
-            <select id="roleSelector" class="w-full p-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-indigo-500 focus:border-indigo-500">
-                <option value="" disabled selected>-- Choisissez votre personnage --</option>
-                <option value="MAXIME MAROIS">Maxime Marois (CHRISTOPHE)</option>
-                <option value="JUDITH MAROIS">Judith Marois(LILI)</option>
-                <option value="PROFESSEUR POPOVITCH">Professeur Popovitch(ALEXIS)</option>
-                <option value="AGATHE">Agathe(SOREN)</option>
-                <option value="" disabled selected>BONNE CHANCE!!</option>
-            </select>
+        <!-- Zone 1: Authentification (Visible au début) -->
+        <div id="authArea" class="bg-gray-800 p-6 rounded-xl shadow-2xl mb-6">
+            <label for="firstNameInput" class="block text-white text-lg font-semibold mb-3">Veuillez entrer votre prénom pour démarrer la répétition :</label>
+            <input type="text" id="firstNameInput" class="w-full p-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex: Christophe">
             
-            <button id="startButton" onclick="startRehearsal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150 shadow-lg w-full mt-4 disabled:opacity-50" disabled>
-                Démarrer la Répétition
+            <button id="authButton" onclick="checkAuthorization()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150 shadow-lg w-full mt-4 active:scale-95">
+                Accéder à la Sélection de Rôle
             </button>
-        </div>
-        
-        <!-- Zone de Répétition (Répliques) -->
-        <div id="rehearsalArea" class="line-container bg-gray-800 p-4 sm:p-6 rounded-xl shadow-2xl relative flex flex-col justify-center items-center hidden">
-            <p id="speaker" class="text-lg font-bold mb-3 text-red-400"></p>
-            <p id="lineText" class="text-2xl font-semibold text-white text-center leading-relaxed"></p>
+            <p id="authMessage" class="text-red-400 mt-3 hidden"></p>
         </div>
 
-        <!-- Zone des actions de répétition (Précédent / Continuer / Recommencer) -->
+        <!-- Zone 2: Sélection du Rôle (Visible après l'authentification) -->
+        <div id="roleSelectionArea" class="bg-gray-800 p-6 rounded-xl shadow-2xl mb-6 hidden">
+            <h3 class="text-white text-xl font-semibold mb-4">Sélectionnez votre personnage :</h3>
+            <div id="roleList" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <!-- Les boutons de rôle seront insérés ici par JavaScript -->
+            </div>
+            <p class="text-gray-400 text-sm mt-4 text-center">Le rôle choisi apparaîtra à la place de la réplique pour vous guider.</p>
+        </div>
+        
+        <!-- Zone 3: Répétition Principale (Visible après la sélection du rôle) -->
+        <div id="rehearsalArea" class="line-container bg-gray-800 p-4 sm:p-6 rounded-xl shadow-2xl relative flex flex-col justify-center items-center text-center hidden">
+            <p id="speaker" class="text-lg font-bold mb-3"></p>
+            <p id="lineText" class="text-2xl font-semibold leading-relaxed"></p>
+        </div>
+
+        <!-- Zone 4: Boutons d'Action (Visible pendant la répétition) -->
         <div id="rehearsalActions" class="flex flex-col sm:flex-row justify-between gap-4 mt-6 hidden">
             
-            <button id="backButton" onclick="goBack()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-lg sm:w-1/4 disabled:opacity-50">
+            <button id="backButton" onclick="goBack()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg sm:w-1/4 disabled:opacity-50 active:scale-95">
                 Précédent
             </button>
             
-            <button id="actionButton" onclick="handleAction()" class="user-prompt text-xl font-extrabold py-3 px-4 rounded-xl transition duration-150 hover:bg-emerald-600 active:scale-95 shadow-xl sm:flex-grow">
+            <button id="actionButton" onclick="handleAction()" class="user-prompt text-xl font-extrabold py-3 px-4 rounded-xl hover:bg-emerald-600 active:scale-95 shadow-xl sm:flex-grow">
                 Continuer / Révéler
             </button>
             
-            <button id="fullResetButton" onclick="showRoleSelection()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-lg sm:w-1/4">
-                Recommencer
+            <button id="fullResetButton" onclick="showAuthArea()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg sm:w-1/4 active:scale-95">
+                Changer de Rôle
             </button>
         </div>
 
+        <!-- Message de Fin -->
         <p id="completionMessage" class="text-center text-green-400 text-2xl font-bold mt-10 hidden">
             FIN DE LA SCÈNE ! Bravo à tous !
         </p>
     </div>
 
     <script>
-        // Le script complet de la pièce, incluant les didascalies.
+        // Rôle de l'utilisateur (sera défini après sélection)
+        let YOUR_ROLE = null; 
+        
+        // Prénoms autorisés (en minuscules pour une vérification insensible à la casse)
+        const AUTHORIZED_NAMES = ['christophe', 'maxime', 'lili', 'judith', 'soren', 'agathe', 'alexis', 'popovitch', 'béatrice', 'beatrice', 'petr-paul']; 
+
+        // Rôles dans la pièce (déduits du script pour la sélection)
+        const ALL_ROLES = ['MAXIME MAROIS', 'JUDITH MAROIS', 'PROFESSEUR POPOVITCH', 'AGATHE', 'FIN'];
+
+        // Le script complet de la pièce
         const SCRIPT = [
             { speaker: 'MAXIME MAROIS', line: 'Snif! Comment tu fais pour manger comme ça alors que ma vie s\'écroule ?' },
             { speaker: 'JUDITH MAROIS', line: '(la bouche pleine.) Voyons, Maxime! Il y en a d\'autres filles sur la terre!' },
@@ -162,16 +184,19 @@
             { speaker: 'FIN', line: 'FIN' },
         ];
 
-        let YOUR_ROLE = null; // Sera défini après la sélection
         let currentLineIndex = 0;
         let isRehearsing = false;
-        let isWaitingForUser = false; // Vrai quand c'est le tour de l'acteur de parler
+        let isWaitingForUser = false; 
 
-        const roleSelector = document.getElementById('roleSelector');
-        const startButton = document.getElementById('startButton');
+        // Références aux éléments du DOM
+        const firstNameInput = document.getElementById('firstNameInput');
+        const authArea = document.getElementById('authArea');
+        const authMessage = document.getElementById('authMessage');
+
+        const roleSelectionArea = document.getElementById('roleSelectionArea');
+        const roleList = document.getElementById('roleList');
         const currentRoleDisplay = document.getElementById('currentRoleDisplay');
-        const roleSelectionArea = document.getElementById('roleSelection');
-
+        
         const rehearsalArea = document.getElementById('rehearsalArea');
         const speakerElement = document.getElementById('speaker');
         const lineTextElement = document.getElementById('lineText');
@@ -180,55 +205,103 @@
         const backButton = document.getElementById('backButton');
         const rehearsalActions = document.getElementById('rehearsalActions');
         const completionMessage = document.getElementById('completionMessage');
-
-        // Écouteur pour activer le bouton Démarrer si un rôle est sélectionné
-        roleSelector.addEventListener('change', () => {
-            if (roleSelector.value) {
-                startButton.disabled = false;
-            } else {
-                startButton.disabled = true;
-            }
-        });
+        const fullResetButton = document.getElementById('fullResetButton');
 
         /**
-         * Affiche la zone de sélection de rôle et réinitialise tout.
+         * Affiche la zone d'authentification et réinitialise l'état.
          */
-        function showRoleSelection() {
+        function showAuthArea() {
             isRehearsing = false;
             currentLineIndex = 0;
             isWaitingForUser = false;
             YOUR_ROLE = null;
 
-            roleSelectionArea.classList.remove('hidden');
+            // Afficher la zone d'authentification
+            authArea.classList.remove('hidden');
+            // Masquer les autres zones
+            roleSelectionArea.classList.add('hidden');
             rehearsalArea.classList.add('hidden');
             rehearsalActions.classList.add('hidden');
             completionMessage.classList.add('hidden');
-            startButton.disabled = !roleSelector.value;
-            currentRoleDisplay.textContent = 'Sélectionnez votre rôle ci-dessous.';
+
+            // Mise à jour de l'affichage du rôle
+            currentRoleDisplay.textContent = 'Rôle ciblé : Non sélectionné';
+            fullResetButton.textContent = 'Changer de Rôle';
         }
 
+        /**
+         * Vérifie le prénom de l'utilisateur et affiche la sélection de rôle si autorisé.
+         */
+        function checkAuthorization() {
+            const inputName = firstNameInput.value.trim().toLowerCase();
+            
+            if (AUTHORIZED_NAMES.includes(inputName)) {
+                // Autorisé
+                authMessage.classList.add('hidden');
+                authArea.classList.add('hidden'); // Masquer l'authentification
+                showRoleSelection(); // Afficher la sélection de rôle
+            } else {
+                // Non autorisé
+                authMessage.textContent = 'Accès refusé. Vérifiez votre prénom.';
+                authMessage.classList.remove('hidden');
+            }
+        }
 
+        /**
+         * Affiche la zone de sélection de rôle et génère les boutons.
+         */
+        function showRoleSelection() {
+            roleSelectionArea.classList.remove('hidden');
+            generateRoleButtons();
+        }
+
+        /**
+         * Génère dynamiquement les boutons pour chaque rôle.
+         */
+        function generateRoleButtons() {
+            roleList.innerHTML = ''; // Nettoyer les boutons précédents
+            
+            // Filtrer le rôle 'FIN' qui n'est pas un rôle jouable
+            const playableRoles = ALL_ROLES.filter(role => role !== 'FIN');
+
+            playableRoles.forEach(role => {
+                const button = document.createElement('button');
+                button.textContent = role;
+                button.className = 'bg-gray-700 hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md active:scale-95';
+                button.onclick = () => selectRole(role);
+                roleList.appendChild(button);
+            });
+        }
+
+        /**
+         * Sélectionne le rôle de l'utilisateur et démarre la répétition.
+         * @param {string} role - Le rôle sélectionné.
+         */
+        function selectRole(role) {
+            YOUR_ROLE = role;
+            currentRoleDisplay.textContent = `Rôle ciblé : ${YOUR_ROLE}`;
+            fullResetButton.textContent = 'Recommencer'; // Le bouton de reset devient "Recommencer"
+
+            // Masquer la sélection de rôle
+            roleSelectionArea.classList.add('hidden');
+            
+            startRehearsal(); // Démarre le processus de répétition
+        }
+        
         /**
          * Démarre le processus de répétition.
          */
         function startRehearsal() {
-            if (!roleSelector.value) return;
+            if (!YOUR_ROLE) return; // Sécurité
 
-            YOUR_ROLE = roleSelector.value;
             isRehearsing = true;
             currentLineIndex = 0;
             
-            // Mettre à jour l'affichage du rôle
-            currentRoleDisplay.textContent = `Vous répétez le rôle de : ${YOUR_ROLE}`;
-
-            // Masquer le sélecteur, afficher la zone de répétition et les boutons d'action
-            roleSelectionArea.classList.add('hidden');
+            // Afficher la zone de répétition et les boutons d'action
             rehearsalArea.classList.remove('hidden');
             rehearsalActions.classList.remove('hidden');
             completionMessage.classList.add('hidden');
             
-            lineTextElement.classList.remove('revealed-line');
-
             nextLine();
         }
 
@@ -236,7 +309,7 @@
          * Met à jour l'état du bouton "Précédent" (désactivé si au début du script).
          */
         function updateBackButtonState() {
-            // Désactiver le bouton si on est à la toute première ligne (index 0)
+            // Désactiver le bouton si on est à la toute première ligne (index 0) ou la ligne suivante (index 1)
             backButton.disabled = currentLineIndex <= 1;
         }
 
@@ -246,8 +319,9 @@
         function nextLine() {
             if (!isRehearsing) return;
 
+            // Vérifie si l'index pointe vers la fin du script
             if (currentLineIndex >= SCRIPT.length - 1) {
-                // Fin de la pièce (index - 1 car la dernière entrée est 'FIN')
+                // Gestion de la fin de la pièce
                 rehearsalArea.classList.add('hidden');
                 rehearsalActions.classList.add('hidden');
                 completionMessage.classList.remove('hidden');
@@ -256,9 +330,14 @@
             }
 
             const currentLine = SCRIPT[currentLineIndex];
-            currentLineIndex++;
+            currentLineIndex++; // Incrémenter l'index pour la prochaine ligne
+
+            // Nettoyer les classes de style précédentes
+            lineTextElement.classList.remove('revealed-line');
+            rehearsalArea.classList.remove('user-prompt', 'actor-line', 'revealed-line');
+            speakerElement.classList.remove('text-gray-900', 'text-red-400', 'text-gray-900');
+            lineTextElement.classList.remove('text-gray-900', 'text-white');
             
-            lineTextElement.classList.remove('revealed-line'); // Nettoyer la couleur de la ligne précédente
             isWaitingForUser = false;
             updateBackButtonState(); 
 
@@ -267,16 +346,23 @@
                 isWaitingForUser = true;
                 speakerElement.textContent = `Votre tour (${YOUR_ROLE})`;
                 lineTextElement.textContent = 'Réciter votre réplique...';
+
+                // Styles spécifiques pour l'utilisateur
                 rehearsalArea.classList.add('user-prompt');
-                rehearsalArea.classList.remove('actor-line');
+                speakerElement.classList.add('text-gray-900'); // Texte foncé sur fond vert
+                lineTextElement.classList.add('text-gray-900');
                 
-                actionButton.textContent = 'À vous ! (Cliquez/Tapez pour révéler la réplique)';
+                actionButton.textContent = 'À vous ! (Cliquez pour révéler)';
             } else {
                 // C'est la réplique d'un autre personnage (partenaire)
                 speakerElement.textContent = currentLine.speaker + ' dit :';
                 lineTextElement.textContent = currentLine.line;
-                rehearsalArea.classList.remove('user-prompt');
+
+                // Styles spécifiques pour le partenaire
                 rehearsalArea.classList.add('actor-line');
+                speakerElement.classList.add('text-red-400'); // Texte rouge sur fond gris sombre
+                lineTextElement.classList.add('text-white');
+                
                 actionButton.textContent = 'Continuer';
             }
         }
@@ -291,9 +377,16 @@
                 // Étape 1: L'utilisateur a cliqué pour voir sa réplique (Triche !)
                 // currentLineIndex pointe sur la ligne *suivante*, donc on utilise index - 1 pour la ligne actuelle
                 const previousLine = SCRIPT[currentLineIndex - 1]; 
+                
                 speakerElement.textContent = previousLine.speaker + ' (RÉVÉLÉ) :';
                 lineTextElement.textContent = previousLine.line;
-                lineTextElement.classList.add('revealed-line'); // Couleur pour la réplique révélée
+                
+                // Appliquer les styles de révélation
+                rehearsalArea.classList.remove('user-prompt', 'actor-line');
+                rehearsalArea.classList.add('revealed-line'); // Utilise le style jaune
+                speakerElement.classList.add('text-gray-900'); 
+                lineTextElement.classList.add('text-gray-900');
+                
                 actionButton.textContent = 'Continuer la pièce';
                 isWaitingForUser = false; // Prêt à passer à la ligne suivante
             } else {
@@ -306,24 +399,29 @@
          * Retourne à la ligne précédente du script.
          */
         function goBack() {
+            // Vérification de la répétition et de la position de l'index
             if (!isRehearsing || currentLineIndex <= 1) return;
             
-            // Pour revenir à la ligne affichée juste avant la ligne actuelle,
-            // on recule de 2 index pour se positionner sur la ligne à afficher, 
-            // car nextLine() incrémente l'index de 1.
+            // On recule de 2 index pour se positionner sur la ligne à afficher, 
             currentLineIndex = currentLineIndex - 2; 
             
-            // Réactiver la zone de répétition si on revenait de l'écran de fin
+            // S'assurer que les zones sont visibles si l'on revenait de l'écran de fin
             completionMessage.classList.add('hidden');
             rehearsalArea.classList.remove('hidden');
 
             nextLine();
         }
         
-        // Initialisation : Afficher le sélecteur de rôle au chargement.
+        // Initialisation : Afficher la zone d'authentification au chargement.
         document.addEventListener('DOMContentLoaded', () => {
-            rehearsalArea.classList.add('actor-line');
-            showRoleSelection(); // Afficher la sélection de rôle au début
+            showAuthArea(); 
+            
+            // Écoute l'appui sur 'Entrée' dans le champ de prénom pour valider
+            firstNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    checkAuthorization();
+                }
+            });
         });
     </script>
 
